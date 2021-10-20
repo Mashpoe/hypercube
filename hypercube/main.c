@@ -47,6 +47,8 @@ float V4[16 * 4] =
 	 1,  1,  1,  1,
 };
 
+float V42[16 * 4];
+
 // store the vertices once they have been projected to 3D
 float V3[16 * 3];
 
@@ -102,6 +104,34 @@ void vecScale4(float* vec, float m)
 	vec[3] *= m;
 }
 
+void matMul4(float* result, const float* a, const float* b)
+{
+	for (int col = 0; col < 4; ++col)
+	{
+		for (int row = 0; row < 4; ++row)
+		{
+			result[col * 4 + row] = 0;
+			for (int k = 0; k < 4; ++k)
+			{
+				result[col * 4 + row] += a[k * 4 + row] * b[col * 4 + k];
+			}
+		}
+	}
+}
+
+void matVecMul4(float* result, const float* mat, const float* vec)
+{
+	for (int row = 0; row < 4; ++row)
+	{
+		result[row] = 0;
+		for (int col = 0; col < 4; ++col)
+		{
+			result[row] += mat[col * 4 + row] * vec[col];
+		}
+	}
+	return result;
+}
+
 // creates a rotation matrix for the XW plane
 // T is the angle in radians
 void rotXW(float* result, float T)
@@ -133,7 +163,38 @@ void rotXW(float* result, float T)
 	Wd[3] = cos(T);
 }
 
-float from4[4] = { 4, 0, 0, 0 };
+// creates a rotation matrix for the ZW plane
+// T is the angle in radians
+void rotZW(float* result, float T)
+{
+	// column vectors
+	float* Wa = result + 4 * 0;
+	float* Wb = result + 4 * 1;
+	float* Wc = result + 4 * 2;
+	float* Wd = result + 4 * 3;
+
+	Wa[0] = 1;
+	Wa[1] = 0;
+	Wa[2] = 0;
+	Wa[3] = 0;
+
+	Wb[0] = 0;
+	Wb[1] = 1;
+	Wb[2] = 0;
+	Wb[3] = 0;
+
+	Wc[0] = 0;
+	Wc[1] = 0;
+	Wc[2] = cos(T);
+	Wc[3] = sin(T);
+
+	Wd[0] = 0;
+	Wd[1] = 0;
+	Wd[2] = -sin(T);
+	Wd[3] = cos(T);
+}
+
+float from4[4] = { 8, 0, 0, 0 };
 float to4[4] = { 0, 0, 0, 0 };
 float up4[4] = { 0, 1, 0, 0 };
 float over4[4] = { 0, 0, 1, 0 };
@@ -169,27 +230,13 @@ void view4(float* result)
 	cross4(Wc, Wd, Wa, Wb);
 }
 
-void matMul4(float* result, float* a, float* b)
-{
-	for (int col = 0; col < 4; ++col)
-	{
-		for (int row = 0; row < 4; ++row)
-		{
-			result[col * 4 + row] = 0;
-			for (int k = 0; k < 4; ++k)
-			{
-				result[col * 4 + row] += a[k * 4 + row] * b[col * 4 + k];
-			}
-		}
-	}
-}
-
 void projectTo3D(float vAngle, const float* mat)
 {
 	// column vectors
 	const float* Wa = mat + 4 * 0;
 	const float* Wb = mat + 4 * 1;
 	const float* Wc = mat + 4 * 2;
+	const float* Wd = mat + 4 * 3;
 
 	// divisor Values
 	double S, T;    
@@ -199,13 +246,13 @@ void projectTo3D(float vAngle, const float* mat)
 	for (int i = 0; i < 16; ++i)
 	{
 		float V[4];
-		vecSub4(&V, V4 + i * 4, from4);
+		vecSub4(&V, V42 + i * 4, from4);
 
-		S = T / dot4(&V, mat + 3 * 4);
+		S = T / dot4(&V, Wd);
 
-		V3[i * 3 + 0] = S * dot4(&V, mat + 0 * 4);
-		V3[i * 3 + 1] = S * dot4(&V, mat + 1 * 4);
-		V3[i * 3 + 2] = S * dot4(&V, mat + 2 * 4);
+		V3[i * 3 + 0] = S * dot4(&V, Wa);
+		V3[i * 3 + 1] = S * dot4(&V, Wb);
+		V3[i * 3 + 2] = S * dot4(&V, Wc);
 	}
 }
 
@@ -241,7 +288,7 @@ void vecScale3(float* vec, float m)
 
 float from3[3] = { 3.00, 0.99, 1.82 };
 float to3[3] = { 0, 0, 0 };
-float up3[3] = { 0, 1, 0 };
+float up3[3] = { 0, -1, 0 };
 
 // generate a 3D view matrix
 void view3(float* result)
@@ -273,7 +320,8 @@ void projectTo2D(float vAngle, const float* mat)
 	const float* Vb = mat + 3 * 1;
 	const float* Vc = mat + 3 * 2;
 
-	double  S, T;    // Divisor Values
+	// divisor values
+	double  S, T;
 
 	T = 1 / tan(vAngle / 2);
 
@@ -304,41 +352,53 @@ int main(int argc, const char* argv[])
 	CHAR_INFO d[wh][ww];
 
 	float viewMat4[4][4];
-	view4(&viewMat4);
-	projectTo3D(M_PI / 4, viewMat4);
-
-	//float modelMat4[4][4];
-	//rotXW(modelMat4, );
-
-	//float MV4[4][4];
+	float modelMat4[4][4];
+	float MV4[4][4];
 
 	float viewMat3[3][3];
-	view3(&viewMat3);
-	projectTo2D(M_PI / 4, viewMat3);
 
 	//float modelMat3[3][3];
 	//float MV3[3][3];
 
-	clr(&d);
-	//COORD pt = { 0, 3 };
-	//set(&d, pt, 'a');
-	//pt.X = 2;
-	//pt.Y = 0;
-	//set(&d, pt, '$');
+	float rotation = 0;
 
-	for (int i = 0; i < 16; ++i)
+	for (;;)
 	{
-		COORD pt = { V2[i * 2 + 0], V2[i * 2 + 1] };
+		rotation += 0.001;
 
-		if (pt.X >= 0 && pt.X < ww && pt.Y >= 0 && pt.Y <= wh)
+		float rot4[4][4];
+		rotXW(&rot4, rotation);
+		for (int i = 0; i < 16; ++i)
 		{
-			set(&d, pt, '@');
+			matVecMul4(&V42[i * 4], &rot4, &V4[i * 4]);
 		}
 
+		view4(&viewMat4);
+		//rotZW(&modelMat4, rotation);
+		//matMul4(&MV4, &viewMat4, &modelMat4);
+
+		projectTo3D(M_PI / 4, &viewMat4);
+
+		view3(&viewMat3);
+		projectTo2D(M_PI / 4, &viewMat3);
+
+		clr(&d);
+
+		for (int i = 0; i < 16; ++i)
+		{
+			COORD pt = { V2[i * 2 + 0], V2[i * 2 + 1] };
+
+			if (pt.X >= 0 && pt.X < ww && pt.Y >= 0 && pt.Y <= wh)
+			{
+				set(&d, pt, '@');
+			}
+
+		}
+
+		WriteConsoleOutput(h, d, s, z, &r);
 	}
 
-	WriteConsoleOutput(h, d, s, z, &r);
 
-	getc(stdin);
+	//getc(stdin);
 
 }

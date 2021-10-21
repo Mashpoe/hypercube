@@ -50,6 +50,8 @@ char getp(CHAR_INFO* d, COORD* pts, float err, int ydir)
 
 void ln(CHAR_INFO* d, COORD a, COORD b)
 {
+	set(d, a, '@');
+	set(d, b, '@');
 
 	int dx = abs(b.X - a.X), sx = a.X < b.X ? 1 : -1;
 	int dy = abs(b.Y - a.Y), sy = a.Y < b.Y ? 1 : -1;
@@ -211,21 +213,6 @@ void vecScale4(float* vec, float m)
 	vec[2] *= m;
 	vec[3] *= m;
 }
-
-//void matMul4(float* result, const float* a, const float* b)
-//{
-//	for (int col = 0; col < 4; ++col)
-//	{
-//		for (int row = 0; row < 4; ++row)
-//		{
-//			result[col * 4 + row] = 0;
-//			for (int k = 0; k < 4; ++k)
-//			{
-//				result[col * 4 + row] += a[k * 4 + row] * b[col * 4 + k];
-//			}
-//		}
-//	}
-//}
 
 void matVecMul4(float* result, const float* mat, const float* vec)
 {
@@ -468,13 +455,10 @@ int main(int argc, const char* argv[])
 	CHAR_INFO d[wh][ww];
 
 	float viewMat4[4][4];
-	float modelMat4[4][4];
-	float MV4[4][4];
+	float rot4[4][4];
 
 	float viewMat3[3][3];
-
-	//float modelMat3[3][3];
-	//float MV3[3][3];
+	float rot3[3][3];
 
 	float rotation = 0;
 
@@ -482,19 +466,15 @@ int main(int argc, const char* argv[])
 	{
 		rotation += 0.01;
 
-		float rot4[4][4];
 		rotXW4(&rot4, rotation);
 		view4(&viewMat4);
 		projectTo3D(M_PI / 3, &viewMat4, &rot4);
 
-		float rot3[3][3];
 		rotXZ3(&rot3, 0);
 		view3(&viewMat3);
 		projectTo2D(M_PI / 4, &viewMat3, &rot3);
 
 		clr(&d);
-
-
 
 		for (int i = 0; i < 32; ++i)
 		{
@@ -505,22 +485,9 @@ int main(int argc, const char* argv[])
 			ln(&d, c1, c2);
 		}
 
-		for (int i = 0; i < 16; ++i)
-		{
-			COORD pt = { V2[i][0], V2[i][1] };
-
-			if (pt.X >= 0 && pt.X < ww && pt.Y >= 0 && pt.Y <= wh)
-			{
-				set(&d, pt, '@');
-			}
-		}
-
 		WriteConsoleOutput(h, d, s, z, &r);
 
 		Sleep(1);
 	}
-
-
-	//getc(stdin);
 
 }

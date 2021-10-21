@@ -21,14 +21,66 @@ void set(CHAR_INFO* d, COORD pt, char c)
 	d[pt.Y * ww + pt.X].Char.UnicodeChar = c;
 }
 
+char getp(CHAR_INFO* d, COORD* pts)
+{
+	if (d[pts[1].Y * ww + pts[1].X].Char.UnicodeChar != L' ')
+	{
+		return '+';
+	}
+
+	if (abs(pts[0].Y - pts[2].Y) < 2)
+	{
+		if ((pts[0].Y < pts[2].Y && pts[1].Y == pts[2].Y) ||
+			(pts[0].Y > pts[2].Y && pts[1].Y == pts[0].Y))
+		{
+			return '-';
+		}
+		else
+		{
+			return '_';
+		}
+	}
+	else if (abs(pts[0].X - pts[2].X) < 2 &&
+		(pts[0].X >= pts[2].X || pts[1].X != pts[2].X) &&
+		(pts[0].X <= pts[2].X || pts[1].X != pts[0].X))
+	{
+		return '|';
+	}
+	else
+	{
+		int mX = pts[0].Y < pts[2].Y ? pts[0].X : pts[2].X;
+		return mX < pts[1].X ? '\\' : '/';
+	}
+}
+
 void ln(CHAR_INFO* d, COORD a, COORD b)
 {
+
 	int dx = abs(b.X - a.X), sx = a.X < b.X ? 1 : -1;
 	int dy = abs(b.Y - a.Y), sy = a.Y < b.Y ? 1 : -1;
 	int err = (dx > dy ? dx : -dy) / 2, e2;
 
+	COORD pts[3];
+
+	for (int i = 0; i < 3; ++i)
+	{
+		pts[i] = a;
+		if (a.X == b.X && a.Y == b.Y) {
+			return;
+		}
+		e2 = err;
+		if (e2 > -dx) { err -= dy; a.X += sx; }
+		if (e2 < dy) { err += dx; a.Y += sy; }
+	}
+
 	for (;;) {
-		set(d, a, '+');
+		// find the correct character
+		set(d, pts[1], getp(d, &pts));
+
+		pts[0] = pts[1];
+		pts[1] = pts[2];
+		pts[2] = a;
+		
 		if (a.X == b.X && a.Y == b.Y) {
 			break;
 		}
@@ -36,27 +88,30 @@ void ln(CHAR_INFO* d, COORD a, COORD b)
 		if (e2 > -dx) { err -= dy; a.X += sx; }
 		if (e2 < dy) { err += dx; a.Y += sy; }
 	}
+
+	// add the final point
+	set(d, pts[1], getp(d, &pts));
 }
 
 // hypercube vertices in 4D
 float V4[16][4] =
 {
-	-1, -1, -1, -1,
-	 1, -1, -1, -1,
-	-1,  1, -1, -1,
-	 1,  1, -1, -1,
-	-1, -1,  1, -1,
-	 1, -1,  1, -1,
-	-1,  1,  1, -1,
-	 1,  1,  1, -1,
-	-1, -1, -1,  1,
-	 1, -1, -1,  1,
-	-1,  1, -1,  1,
-	 1,  1, -1,  1,
-	-1, -1,  1,  1,
-	 1, -1,  1,  1,
-	-1,  1,  1,  1,
-	 1,  1,  1,  1,
+	{-1, -1, -1, -1},
+	{ 1, -1, -1, -1},
+	{-1,  1, -1, -1},
+	{ 1,  1, -1, -1},
+	{-1, -1,  1, -1},
+	{ 1, -1,  1, -1},
+	{-1,  1,  1, -1},
+	{ 1,  1,  1, -1},
+	{-1, -1, -1,  1},
+	{ 1, -1, -1,  1},
+	{-1,  1, -1,  1},
+	{ 1,  1, -1,  1},
+	{-1, -1,  1,  1},
+	{ 1, -1,  1,  1},
+	{-1,  1,  1,  1},
+	{ 1,  1,  1,  1},
 };
 
 // store the vertices once they have been projected to 3D
@@ -424,7 +479,7 @@ int main(int argc, const char* argv[])
 
 	for (;;)
 	{
-		rotation += 0.001;
+		rotation += 0.01;
 
 		float rot4[4][4];
 		rotXW4(&rot4, rotation);
@@ -432,22 +487,13 @@ int main(int argc, const char* argv[])
 		projectTo3D(M_PI / 3, &viewMat4, &rot4);
 
 		float rot3[3][3];
-		rotXZ3(&rot3, rotation / 6);
+		rotXZ3(&rot3, 0);
 		view3(&viewMat3);
 		projectTo2D(M_PI / 4, &viewMat3, &rot3);
 
 		clr(&d);
 
-		//for (int i = 0; i < 16; ++i)
-		//{
-		//	COORD pt = { V2[i * 2 + 0], V2[i * 2 + 1] };
 
-		//	if (pt.X >= 0 && pt.X < ww && pt.Y >= 0 && pt.Y <= wh)
-		//	{
-		//		set(&d, pt, '@');
-		//	}
-
-		//}
 
 		for (int i = 0; i < 32; ++i)
 		{
@@ -458,7 +504,19 @@ int main(int argc, const char* argv[])
 			ln(&d, c1, c2);
 		}
 
+		for (int i = 0; i < 16; ++i)
+		{
+			COORD pt = { V2[i][0], V2[i][1] };
+
+			if (pt.X >= 0 && pt.X < ww && pt.Y >= 0 && pt.Y <= wh)
+			{
+				set(&d, pt, '@');
+			}
+		}
+
 		WriteConsoleOutput(h, d, s, z, &r);
+
+		Sleep(1);
 	}
 
 

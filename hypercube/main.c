@@ -460,9 +460,11 @@ int main(int argc, const char* argv[])
 	CHAR_INFO d[wh][ww];
 
 	float viewMat4[4][4];
+	view4(&viewMat4);
 	float rot4[4][4];
 
 	float viewMat3[3][3];
+	view3(&viewMat3);
 	float rot3[3][3];
 
 	float rotation = 0;
@@ -472,11 +474,9 @@ int main(int argc, const char* argv[])
 		rotation += 0.01;
 
 		rotXW4(&rot4, rotation);
-		view4(&viewMat4);
 		projectTo3D(M_PI / 3, &viewMat4, &rot4);
 
 		rotXZ3(&rot3, rotation * 0.3);
-		view3(&viewMat3);
 		projectTo2D(M_PI / 4, &viewMat3, &rot3);
 
 		clr(&d);

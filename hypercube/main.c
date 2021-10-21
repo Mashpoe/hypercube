@@ -471,11 +471,11 @@ int main(int argc, const char* argv[])
 	{
 		rotation += 0.01;
 
-		rotXW4(&rot4, rotation * 0.1);
+		rotXW4(&rot4, rotation);
 		view4(&viewMat4);
 		projectTo3D(M_PI / 3, &viewMat4, &rot4);
 
-		rotXZ3(&rot3, rotation);
+		rotXZ3(&rot3, rotation * 0.3);
 		view3(&viewMat3);
 		projectTo2D(M_PI / 4, &viewMat3, &rot3);
 

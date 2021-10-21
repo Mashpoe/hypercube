@@ -21,36 +21,31 @@ void set(CHAR_INFO* d, COORD pt, char c)
 	d[pt.Y * ww + pt.X].Char.UnicodeChar = c;
 }
 
-char getp(CHAR_INFO* d, COORD* pts)
+char getp(CHAR_INFO* d, COORD* pts, float err, int ydir)
 {
-	if (d[pts[1].Y * ww + pts[1].X].Char.UnicodeChar != L' ')
-	{
-		return '+';
-	}
+	//if (d[pts[1].Y * ww + pts[1].X].Char.UnicodeChar != L' ')
+	//{
+	//	return '+';
+	//}
 
 	if (abs(pts[0].Y - pts[2].Y) < 2)
 	{
-		if ((pts[0].Y < pts[2].Y && pts[1].Y == pts[2].Y) ||
-			(pts[0].Y > pts[2].Y && pts[1].Y == pts[0].Y))
+		if (ydir == 1 && err < 0.5 || ydir == -1 && err > 0.5)
 		{
 			return '-';
 		}
-		else
-		{
-			return '_';
-		}
+		return '_';
 	}
-	else if (abs(pts[0].X - pts[2].X) < 2 &&
+	
+	if (abs(pts[0].X - pts[2].X) < 2 &&
 		(pts[0].X >= pts[2].X || pts[1].X != pts[2].X) &&
 		(pts[0].X <= pts[2].X || pts[1].X != pts[0].X))
 	{
 		return '|';
 	}
-	else
-	{
-		int mX = pts[0].Y < pts[2].Y ? pts[0].X : pts[2].X;
-		return mX < pts[1].X ? '\\' : '/';
-	}
+
+	int mX = pts[0].Y < pts[2].Y ? pts[0].X : pts[2].X;
+	return mX < pts[1].X ? '\\' : '/';\
 }
 
 void ln(CHAR_INFO* d, COORD a, COORD b)
@@ -61,10 +56,12 @@ void ln(CHAR_INFO* d, COORD a, COORD b)
 	int err = (dx > dy ? dx : -dy) / 2, e2;
 
 	COORD pts[3];
+	float ers[3];
 
 	for (int i = 0; i < 3; ++i)
 	{
 		pts[i] = a;
+		ers[i] = (float)(err - dx) / (float)(dy - dx);
 		if (a.X == b.X && a.Y == b.Y) {
 			return;
 		}
@@ -75,11 +72,15 @@ void ln(CHAR_INFO* d, COORD a, COORD b)
 
 	for (;;) {
 		// find the correct character
-		set(d, pts[1], getp(d, &pts));
+		set(d, pts[1], getp(d, &pts, ers[1], sy));
 
 		pts[0] = pts[1];
 		pts[1] = pts[2];
 		pts[2] = a;
+
+		ers[0] = ers[1];
+		ers[1] = ers[2];
+		ers[2] = (float)(err - dx) / (float)(dy - dx);
 		
 		if (a.X == b.X && a.Y == b.Y) {
 			break;
@@ -90,7 +91,7 @@ void ln(CHAR_INFO* d, COORD a, COORD b)
 	}
 
 	// add the final point
-	set(d, pts[1], getp(d, &pts));
+	set(d, pts[1], getp(d, &pts, ers[1], sy));
 }
 
 // hypercube vertices in 4D

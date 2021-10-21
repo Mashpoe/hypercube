@@ -21,7 +21,7 @@ void set(CHAR_INFO* d, COORD pt, char c)
 	d[pt.Y * ww + pt.X].Char.UnicodeChar = c;
 }
 
-char getp(CHAR_INFO* d, COORD* pts, float err, int ydir)
+char getp(CHAR_INFO* d, COORD* pts, float err)
 {
 	//if (d[pts[1].Y * ww + pts[1].X].Char.UnicodeChar != L' ')
 	//{
@@ -30,7 +30,7 @@ char getp(CHAR_INFO* d, COORD* pts, float err, int ydir)
 
 	if (abs(pts[0].Y - pts[2].Y) < 2)
 	{
-		if (ydir == 1 && err < 0.5 || ydir == -1 && err > 0.5)
+		if (err > 0.5)
 		{
 			return '-';
 		}
@@ -63,18 +63,21 @@ void ln(CHAR_INFO* d, COORD a, COORD b)
 	for (int i = 0; i < 3; ++i)
 	{
 		pts[i] = a;
-		ers[i] = (float)(err - dx) / (float)(dy - dx);
+		ers[i] = (float)(err - dx) / (dy - dx);
+		ers[i] = sy == 1 ? 1.0 - ers[i] : ers[i];
+
 		if (a.X == b.X && a.Y == b.Y) {
 			return;
 		}
+
 		e2 = err;
 		if (e2 > -dx) { err -= dy; a.X += sx; }
 		if (e2 < dy) { err += dx; a.Y += sy; }
 	}
 
-	for (;;) {
-		// find the correct character
-		set(d, pts[1], getp(d, &pts, ers[1], sy));
+	for (;;)
+	{
+		set(d, pts[1], getp(d, &pts, ers[1]));
 
 		pts[0] = pts[1];
 		pts[1] = pts[2];
@@ -82,18 +85,20 @@ void ln(CHAR_INFO* d, COORD a, COORD b)
 
 		ers[0] = ers[1];
 		ers[1] = ers[2];
-		ers[2] = (float)(err - dx) / (float)(dy - dx);
+		ers[2] = (float)(err - dx) / (dy - dx);
+		ers[2] = sy == 1 ? 1.0 - ers[2] : ers[2];
 		
 		if (a.X == b.X && a.Y == b.Y) {
 			break;
 		}
+
 		e2 = err;
 		if (e2 > -dx) { err -= dy; a.X += sx; }
 		if (e2 < dy) { err += dx; a.Y += sy; }
 	}
 
 	// add the final point
-	set(d, pts[1], getp(d, &pts, ers[1], sy));
+	set(d, pts[1], getp(d, &pts, ers[1]));
 }
 
 // hypercube vertices in 4D
@@ -466,11 +471,11 @@ int main(int argc, const char* argv[])
 	{
 		rotation += 0.01;
 
-		rotXW4(&rot4, rotation);
+		rotXW4(&rot4, rotation * 0.1);
 		view4(&viewMat4);
 		projectTo3D(M_PI / 3, &viewMat4, &rot4);
 
-		rotXZ3(&rot3, 0);
+		rotXZ3(&rot3, rotation);
 		view3(&viewMat3);
 		projectTo2D(M_PI / 4, &viewMat3, &rot3);
 
